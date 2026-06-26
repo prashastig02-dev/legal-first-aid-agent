@@ -1,0 +1,29 @@
+[0:00 — HOOK]
+Imagine receiving an official-looking court notice or a landlord eviction notice. For most people, the immediate reaction is panic, confusion, and anxiety, because legal language is incredibly hard to understand and hire a lawyer is expensive and slow.
+
+[0:20 — WHAT IT IS]
+To solve this, I built the Legal First-Aid Agent—an intelligent, secure legal notice assistant designed for citizens in India. Belonging to the Agents for Good track, this agent helps everyday people parse complex notices, understand their rights and key deadlines, and draft formal response letters safely.
+
+[0:40 — SHOW THE BANNER]
+(show assets/cover_page_banner.png)
+As you can see on the banner, Legal First-Aid is built to be Automated, Secure, and Intelligent, serving as the first line of legal triage for citizens.
+
+[1:00 — ARCHITECTURE]
+(show assets/architecture_diagram.png)
+Let's look at the system architecture. When a user uploads a notice or enters a query, it first passes through our Security Checkpoint. If it's safe, the Orchestrator takes over. It sends the notice to the Document Reader Agent which extracts structured facts like the sender, recipient, and notice type. Then, the Orchestrator delegates to two specialized sub-agents in parallel: the Rights Explainer Agent—which uses our Indian Kanoon and Google Search MCP servers to find relevant laws and judgments—and the Deadline Tracker Agent, which calculates target reply dates using our local legal MCP tools. Once analyzed, the system pauses for Human-in-the-Loop review to collect the user's specific statements. Finally, the Response Drafter Agent generates a professional reply letter and plain-language summary, before the Final Output node appends a mandatory legal disclaimer.
+
+[2:00 — LIVE DEMO]
+(switch to playground at localhost:18081)
+Let's see this in action. I will input a sample tenancy eviction notice stating that the tenant must vacate within 15 days due to the landlord's personal requirement.
+(pause)
+Once submitted, notice that the Document Reader immediately classifies this as an eviction notice. The Rights Explainer uses the MCP tools to cite Section 106 of the Transfer of Property Act and explains the tenant's rights under Rent Control. The Deadline Tracker computes the exact calendar target date, showing us the remaining days. 
+(pause)
+Now, the workflow pauses with a Human-in-the-loop prompt. I will enter my facts: 'Landlord accepted rent yesterday.'
+(pause)
+After resuming, the Response Drafter automatically generates a customized reply letter disputing the claim based on rent acceptance and requesting a time extension, complete with the standard Indian legal disclaimer at the bottom.
+
+[3:00 — SECURITY & MCP]
+A key feature of this application is privacy and safety. Our Security Checkpoint strips out personal identifiers like Aadhar card numbers and phone numbers in memory before the LLM is queried. It also immediately rejects prompt injection attempts and logs events. On the data side, the Indian Kanoon and Google Search MCP tools fetch accurate legal databases dynamically.
+
+[3:30 — IMPACT / CLOSE]
+By giving common citizens a clear understanding of legal notices and helping them meet deadlines, the Legal First-Aid Agent bridges the access-to-justice gap, reducing panic and preparing them to consult licensed advocates more effectively. Thank you.
