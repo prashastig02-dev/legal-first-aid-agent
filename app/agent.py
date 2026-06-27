@@ -125,7 +125,8 @@ async def security_checkpoint(ctx: Context, node_input: str) -> str:
     if len(text_content) < 300:
         cleaned_path = text_content.strip("'\"")
         _, ext = os.path.splitext(cleaned_path.lower())
-        if ext:
+        # Treat as file path only if it has a valid extension name, and either exists on disk or contains no spaces
+        if ext and len(ext) > 1 and ext[1:].isalnum() and (os.path.exists(cleaned_path) or " " not in cleaned_path):
             is_file_path = True
             valid_extensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
             if ext not in valid_extensions:
@@ -366,6 +367,8 @@ workflow_graph = Workflow(
         (orchestrator, final_output)
     ]
 )
+
+root_agent = workflow_graph
 
 app = App(
     root_agent=workflow_graph,
