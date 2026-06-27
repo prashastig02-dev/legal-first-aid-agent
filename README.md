@@ -5,6 +5,13 @@
 ## Overview
 The **Legal First-Aid Agent** is a state-of-the-art multi-agent assistant built using Google ADK 2.0 and the Model Context Protocol (MCP). It is designed to act as a secure, intelligent, and private first line of legal triage for citizens in India receiving official notices. It helps users understand their rights, track response deadlines, and draft reply templates safely, bridging the access-to-justice gap.
 
+## Visual Preview
+
+### Application Dashboard Mockup
+![Application Dashboard Mockup](assets/dashboard_mockup.png)
+
+### App Icon / Conceptual Logo
+![App Icon / Logo](assets/app_logo.png)
 
 ## Prerequisites
 * Python 3.11 or higher
@@ -151,6 +158,8 @@ graph TD
 ## Assets
 * [Cover Page Banner](assets/cover_page_banner.png)
 * [Workflow Diagram](assets/architecture_diagram.png)
+* [Application Dashboard Mockup](assets/dashboard_mockup.png)
+* [Conceptual App Logo](assets/app_logo.png)
 
 ## Demo Script
  Narration script for presentation is available at [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt).
