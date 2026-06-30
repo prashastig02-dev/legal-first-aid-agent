@@ -3,6 +3,7 @@ import re
 import sys
 import json
 import datetime
+import asyncio
 from typing import Any, Union, Optional
 
 from google.adk.agents import Agent
@@ -40,6 +41,22 @@ search_mcp_toolset = McpToolset(
         args=["-m", "app.google_search_mcp"]
     )
 )
+
+async def run_node_with_retry(ctx: Context, node, node_input, max_retries=5, delay=15) -> str:
+    """Runs a node with transient retry logic for Gemini API 429 rate limits."""
+    for attempt in range(max_retries):
+        try:
+            return await ctx.run_node(node, node_input=node_input)
+        except Exception as e:
+            err_str = str(e).lower()
+            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str or "too many requests" in err_str:
+                if attempt < max_retries - 1:
+                    print(f"[RETRY] Hit Gemini 429 rate limit. Retrying in {delay}s (Attempt {attempt+1}/{max_retries})...", file=sys.stderr)
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, 60)  # Exponential backoff, cap at 60s
+                    continue
+            raise e
+
 
 # ---------------------------------------------------------------------------
 # Specialized Agents
@@ -254,7 +271,7 @@ async def security_checkpoint(ctx: Context, node_input: str) -> str:
 async def document_reader_agent(ctx: Context, node_input: str) -> str:
     """Classifies the notice using the pre-scrubbed text in context state."""
     text = ctx.state.get("scrubbed_input", node_input)
-    result = await ctx.run_node(document_classifier_agent, node_input=text)
+    result = await run_node_with_retry(ctx, document_classifier_agent, node_input=text)
     return str(result)
 
 
@@ -264,7 +281,7 @@ async def orchestrator(ctx: Context, node_input: str) -> str:
     scrubbed_input = ctx.state.get("scrubbed_input", node_input)
     
     # 1. Run Document Reader
-    doc_facts_json = await ctx.run_node(document_reader_agent, node_input=scrubbed_input)
+    doc_facts_json = await run_node_with_retry(ctx, document_reader_agent, node_input=scrubbed_input)
     ctx.state["doc_facts"] = doc_facts_json
     
     doc_type = "other"
@@ -275,10 +292,10 @@ async def orchestrator(ctx: Context, node_input: str) -> str:
         pass
     
     # 2. Run Rights Explainer and Deadline Tracker
-    rights_explanation = await ctx.run_node(rights_explainer_agent, node_input=f"Analyze rights for: {doc_facts_json}")
+    rights_explanation = await run_node_with_retry(ctx, rights_explainer_agent, node_input=f"Analyze rights for: {doc_facts_json}")
     ctx.state["rights_explanation"] = rights_explanation
     
-    deadline_analysis = await ctx.run_node(deadline_tracker_agent, node_input=f"Analyze deadlines for: {doc_facts_json}")
+    deadline_analysis = await run_node_with_retry(ctx, deadline_tracker_agent, node_input=f"Analyze deadlines for: {doc_facts_json}")
     ctx.state["deadline_analysis"] = deadline_analysis
     
     # 3. Pause for Human-in-the-loop facts for response drafting
@@ -305,7 +322,8 @@ async def orchestrator(ctx: Context, node_input: str) -> str:
     ctx.state["user_facts"] = str(user_facts)
     
     # 4. Run Response Drafter
-    response_draft = await ctx.run_node(
+    response_draft = await run_node_with_retry(
+        ctx,
         response_drafter_agent,
         node_input=(
             f"Draft response for: {doc_facts_json}.\n"
