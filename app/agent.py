@@ -43,15 +43,16 @@ search_mcp_toolset = McpToolset(
 )
 
 async def run_node_with_retry(ctx: Context, node, node_input, max_retries=5, delay=15) -> str:
-    """Runs a node with transient retry logic for Gemini API 429 rate limits."""
+    """Runs a node with transient retry logic for Gemini API 429 rate limits or 503 service overloads."""
     for attempt in range(max_retries):
         try:
             return await ctx.run_node(node, node_input=node_input)
         except Exception as e:
             err_str = str(e).lower()
-            if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str or "too many requests" in err_str:
+            transient_terms = ["429", "resource_exhausted", "quota", "too many requests", "503", "unavailable", "high demand", "overloaded"]
+            if any(term in err_str for term in transient_terms):
                 if attempt < max_retries - 1:
-                    print(f"[RETRY] Hit Gemini 429 rate limit. Retrying in {delay}s (Attempt {attempt+1}/{max_retries})...", file=sys.stderr)
+                    print(f"[RETRY] Hit transient Gemini error ({err_str[:60]}...). Retrying in {delay}s (Attempt {attempt+1}/{max_retries})...", file=sys.stderr)
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, 60)  # Exponential backoff, cap at 60s
                     continue
