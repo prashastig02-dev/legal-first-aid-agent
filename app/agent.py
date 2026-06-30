@@ -20,6 +20,58 @@ from app.config import config
 # Model initialization using the environment configuration
 model_instance = Gemini(model=config.model)
 
+# Bind robust retry wrappers to the model instance to intercept transient API errors (429, 503)
+import types
+import time
+import asyncio
+
+original_generate_content_async = model_instance.generate_content_async
+
+async def wrapped_generate_content_async(self, llm_request, stream=False):
+    max_retries = 5
+    delay = 15
+    for attempt in range(max_retries):
+        try:
+            async for chunk in original_generate_content_async(llm_request, stream=stream):
+                yield chunk
+            return
+        except Exception as e:
+            err_str = str(e).lower()
+            transient_terms = ["429", "resource_exhausted", "quota", "too many requests", "503", "unavailable", "high demand", "overloaded"]
+            if any(term in err_str for term in transient_terms):
+                if attempt < max_retries - 1:
+                    print(f"[RETRY-ASYNC] Model call hit transient error ({err_str[:60]}...). Retrying in {delay}s (Attempt {attempt+1}/{max_retries})...", file=sys.stderr)
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, 60)
+                    continue
+            raise e
+
+model_instance.generate_content_async = types.MethodType(wrapped_generate_content_async, model_instance)
+
+original_generate_content = model_instance.generate_content
+
+def wrapped_generate_content(self, llm_request, stream=False):
+    max_retries = 5
+    delay = 15
+    for attempt in range(max_retries):
+        try:
+            for chunk in original_generate_content(llm_request, stream=stream):
+                yield chunk
+            return
+        except Exception as e:
+            err_str = str(e).lower()
+            transient_terms = ["429", "resource_exhausted", "quota", "too many requests", "503", "unavailable", "high demand", "overloaded"]
+            if any(term in err_str for term in transient_terms):
+                if attempt < max_retries - 1:
+                    print(f"[RETRY-SYNC] Model call hit transient error ({err_str[:60]}...). Retrying in {delay}s (Attempt {attempt+1}/{max_retries})...", file=sys.stderr)
+                    time.sleep(delay)
+                    delay = min(delay * 2, 60)
+                    continue
+            raise e
+
+model_instance.generate_content = types.MethodType(wrapped_generate_content, model_instance)
+
+
 # Create local MCP Toolsets
 mcp_toolset = McpToolset(
     connection_params=StdioServerParameters(
