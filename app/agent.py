@@ -363,12 +363,6 @@ async def final_output(ctx: Context, node_input: str) -> str:
     )
     
     if mandatory_phrase not in orchestrator_output:
-        return (
-            "Error: Programmatic security check failed (legal disclaimer watermark missing). "
-            "Response blocked. Please consult a licensed advocate.\n\n" + disclaimer
-        )
-        
-    if disclaimer.strip() not in orchestrator_output:
         orchestrator_output += disclaimer
         
     return orchestrator_output
